@@ -137,16 +137,28 @@ git clone https://github.com/neulab/knn-transformers
 cd knn-transformers
 ```
 
+#### Create a conda environment
+Recommended: Python <= 3.10
+```bash
+conda create -n knnT python=3.9
+conda activate knnT
+```
+
 #### Requirements 
 Run:
 ```bash
-pip install requirements.txt`
+pip install -r requirements.txt
 ```
 
-* The project also depends on the `faiss` library. In MacOS, use the Anaconda installation instead:
+Then install faiss:
+```bash
+conda install -c conda-forge faiss-gpu=1.7.2
+```
+
+<!-- * The project also depends on the `faiss` library. In MacOS, use the Anaconda installation instead:
 ```
 conda install -c conda-forge faiss-cpu
-```
+``` -->
 
 ### Step 1: Evaluating the base Language Model
 
@@ -171,10 +183,12 @@ To download a datastore for Wikitext-103 that we created for the finetuned `gpt2
 wget -P checkpoints/gpt2/ https://knn-transformers.s3.amazonaws.com/gpt2/dstore_gpt2_116988150_768_vals.npy
 ```
 
+(Note that this command only downloads the values in a datastore. You cannot build the FAISS index yourself without the keys, which need to be created by yourself as below. But you could do step4 only with the values and the faiss index.)
+
 Similarly, we created datastores using the `distilgpt2-finetuned-wikitext103`, `gpt2-med-finetuned-wikitext103` and `gpt2-large-finetuned-wikitext103`.
 For all available datastores, see: [https://knn-transformers.s3.amazonaws.com/index.html](https://knn-transformers.s3.amazonaws.com/index.html)
 
-To save a datastore, run:
+To save a datastore (including keys and values), run:
 ```bash
 MODEL=neulab/gpt2-finetuned-wikitext103
 
@@ -184,9 +198,10 @@ python -u run_clm.py \
   --do_eval --eval_subset train \
   --output_dir checkpoints/${MODEL} \
   --dstore_dir checkpoints/${MODEL} \
-  --save_knnlm_dstore
+  --save_knnlm_dstore 
 ```
 
+Note: this process will take a long time.
 
 ### Step 3: Building the FAISS index
 
@@ -206,11 +221,13 @@ MODEL=neulab/gpt2-finetuned-wikitext103
 python -u run_clm.py \
   --model_name_or_path ${MODEL} \
   --dataset_name wikitext --dataset_config_name wikitext-103-raw-v1 \
+  --dstore_size 116988150 \
   --output_dir checkpoints/${MODEL} \
   --dstore_dir checkpoints/${MODEL} \
   --build_index
 ```
 
+Note: this process will take a long time.
 
 ### Step 4: Evaluating Models
 
@@ -222,6 +239,7 @@ MODEL=neulab/gpt2-finetuned-wikitext103
 python -u run_clm.py \
   --model_name_or_path ${MODEL} \
   --dataset_name wikitext --dataset_config_name wikitext-103-raw-v1 \
+  --dstore_size 116988150 \
   --output_dir checkpoints/${MODEL} \
   --do_eval --eval_subset validation \
   --dstore_dir checkpoints/${MODEL} --retomaton
